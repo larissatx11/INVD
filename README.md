@@ -4,26 +4,25 @@ Este projeto simula o monitoramento de um apiário, enviando dados de sensores (
 
 ## Estrutura do Projeto
 
-- **api_simulador/**: Simulador da API que envia dados históricos do apiário.
-- **ingest_csv/**: Serviço que consome dados da API e salva em arquivo CSV.
-- **ingest_json/**: Serviço que consome dados da API e salva em arquivo JSON.
-- **ingest_db/**: Serviço que consome dados da API e insere em banco de dados.
-- **dashboard/**: Dashboard para visualização dos dados ingeridos.
-- **airflow/**: Orquestrador de pipelines (opcional).
-- **docker-compose.yml**: Orquestra todos os serviços em containers.
+- **api_simulador/**: Simulador da API que envia dados históricos do apiário.  
+- **ingest_csv/**: Serviço que consome dados da API e salva em arquivo CSV.  
+- **ingest_json/**: Serviço que consome dados da API e salva em arquivo JSON.  
+- **ingest_db/**: Serviço que consome dados da API e insere em banco de dados.  
+- **dashboard/**: Dashboard para visualização dos dados ingeridos.  
+- **airflow/**: Orquestrador de pipelines (opcional).  
+- **docker-compose.yml**: Orquestra todos os serviços em containers.  
 
 ## Como executar
 
 Para rodar todo o projeto:
 
-```sh
+```bash
 sudo docker-compose up --build
 
-Visualizando os dados no banco
-Para acompanhar as atualizações no banco de dados:
+```
+## Visualizando os dados no banco
 
+Para acompanhar as atualizações no banco de dados a cada 2 segundos, utilize:
+
+```bash
 watch -n 2 "sudo docker exec -i trabalho_final_mysql_1 mysql -u root -proot -e 'USE colmeia; SELECT * FROM dados_colmeia ORDER BY registro DESC LIMIT 5;'"
-
-Funcionamento
-O serviço api_simulador disponibiliza dados históricos do apiário via API REST.
-Os serviços de ingestão (ingest_csv, ingest_json, ingest_db) consomem esses dados e os armazenam em diferentes formatos.
