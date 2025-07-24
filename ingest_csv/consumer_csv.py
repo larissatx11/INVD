@@ -8,7 +8,7 @@ from kafka import KafkaProducer
 API_URL = "http://api_colmeia:8000/dados"
 CSV_PATH = "/app/ingest_csv/saida/saida_csv.csv"
 KAFKA_TOPIC = "dados_csv"
-KAFKA_BOOTSTRAP_SERVERS = "kafka:9092"  # nome do serviço no docker-compose
+KAFKA_BOOTSTRAP_SERVERS = "kafka:9092" 
 
 def init_csv_file():
     if not os.path.isfile(CSV_PATH):
@@ -18,7 +18,7 @@ def init_csv_file():
             writer.writerow(["id", "createdAt", "updatedAt", "fullWeight", "honeyWeight", "pressure"])
 
 def create_kafka_producer():
-    for i in range(10):  # Tenta 10 vezes
+    for i in range(10):  
         try:
             print(f"[Kafka] Tentando conectar... tentativa {i+1}")
             producer = KafkaProducer(
@@ -34,12 +34,12 @@ def create_kafka_producer():
 
 def main():
     init_csv_file()
-    producer = None  # Inicializa como None
+    producer = None  
     tentativas = 0
 
     while True:
         try:
-            # Tenta criar o produtor Kafka se ainda não tiver sido criado
+            
             if producer is None:
                 tentativas += 1
                 print(f"[Kafka] Tentando conectar... tentativa {tentativas}")
@@ -48,9 +48,8 @@ def main():
                     print("[Kafka] Conectado ao Kafka com sucesso!")
                 except Exception as e:
                     print(f"[Kafka] Kafka ainda indisponível: {e}")
-                    producer = None  # Mantém como None para tentar de novo depois
+                    producer = None 
 
-            # Coleta os dados da API
             response = requests.get(API_URL, timeout=5)
             if response.status_code == 200:
                 dado = response.json()
@@ -63,12 +62,10 @@ def main():
                     "pressure": dado["pressure"]
                 }
 
-                # Salva no CSV sempre
                 with open(CSV_PATH, "a", newline="") as f:
                     writer = csv.writer(f)
                     writer.writerow(subset.values())
 
-                # Se produtor Kafka estiver disponível, publica
                 if producer:
                     producer.send(KAFKA_TOPIC, value=subset)
                     producer.flush()
@@ -84,7 +81,6 @@ def main():
             print(f"Erro inesperado: {str(e)}")
 
         time.sleep(2)
-
 
 if __name__ == "__main__":
     main()
