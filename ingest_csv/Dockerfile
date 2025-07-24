@@ -1,8 +1,9 @@
-FROM python:3.10
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY consumer_csv.py /app/
-RUN pip install requests
+COPY . .
+
+RUN pip install requests kafka-python
 
 CMD ["python", "consumer_csv.py"]
