@@ -55,6 +55,34 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
 
+  uploader_raw:
+    build: ./datalake/uploader_raw
+    depends_on:
+      - ingest_json
+      - ingest_csv
+      - ingest_db
+      - minio
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    volumes:
+      - ./ingest_json/saida:/app/ingest_json/saida
+      - ./ingest_csv/saida:/app/ingest_csv/saida
+      - ./ingest_db/saida:/app/ingest_db/saida
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+
 #  airflow:
 #    build: ./airflow
 #    ports:
@@ -72,3 +100,4 @@ services:
 
 volumes:
   mysql-data:
+  minio_data:
