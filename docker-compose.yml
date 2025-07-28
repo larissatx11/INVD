@@ -37,6 +37,8 @@ services:
 
   ingest_db:
     build: ./ingest_db
+    volumes:
+      - ./ingest_db/saida:/app/saida
     environment:
       MYSQL_HOST: mysql
       MYSQL_USER: root
