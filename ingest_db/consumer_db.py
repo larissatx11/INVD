@@ -2,9 +2,11 @@ import requests
 import mysql.connector
 import time
 import os
+import json
 from datetime import datetime
 
 API_URL = "http://api_colmeia:8000/dados"
+ARQUIVO_EXPORTADO = os.path.join("saida", "dados_exportados.json")
 
 def create_connection():
     try:
@@ -36,13 +38,8 @@ def ensure_table_exists(conn):
     conn.commit()
 
 def parse_datetime(dt_str):
-    """
-    Converte data no formato ISO 8601 com 'T' e 'Z' para formato MySQL
-    """
     try:
-        # Remove o 'Z' e converte para datetime
         dt = datetime.strptime(dt_str.replace('Z', ''), "%Y-%m-%dT%H:%M:%S.%f")
-        # Retorna string no formato aceito pelo MySQL
         return dt.strftime("%Y-%m-%d %H:%M:%S.%f")
     except Exception as e:
         print(f"Erro ao converter data: {dt_str} | {str(e)}")
@@ -74,21 +71,55 @@ def insert_or_update_data(conn, data):
     except Exception as e:
         print(f"❌ Erro ao persistir dados: {str(e)}")
 
-def main():
-    time.sleep(15)  # Espera o MySQL inicializar
-    
+def exportar_dados_para_json(conn):
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM dados_colmeia")
+        resultados = cursor.fetchall()
+
+        # Garantir que a pasta de saída exista
+        os.makedirs("saida", exist_ok=True)
+        
+        with open(ARQUIVO_EXPORTADO, "w", encoding="utf-8") as f:
+            for resultado in resultados:
+                # Preparando o objeto no formato desejado
+                dados = {
+                    "id": resultado["id"],
+                    "createdAt": resultado["created_at"].strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    "updatedAt": resultado["updated_at"].strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    "battery": resultado["battery"],
+                    "isOpen": resultado["is_open"],
+                    "registro": resultado["registro"].strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                }
+                # Escreve cada JSON em uma linha separada
+                json.dump(dados, f, ensure_ascii=False, default=str)
+                f.write("\n")  # Adiciona uma nova linha após cada objeto JSON
+        print("📦 Dados exportados com sucesso (um por linha)!")
+    except Exception as e:
+        print(f"❌ Erro ao exportar dados: {str(e)}")
+
+
+def main():  # Espera o MySQL inicializar
+    ultimo_export = time.time()
+
     while True:
         conn = None
         try:
             conn = create_connection()
             ensure_table_exists(conn)
-            
+
             response = requests.get(API_URL, timeout=5)
             if response.status_code == 200:
                 insert_or_update_data(conn, response.json())
             else:
                 print(f"❌ Erro na API (HTTP {response.status_code})")
-                
+
+            # Exporta os dados a cada 5 segundos
+            agora = time.time()
+            if agora - ultimo_export >= 5:
+                exportar_dados_para_json(conn)
+                ultimo_export = agora
+
         except requests.exceptions.RequestException as e:
             print(f"❌ Falha na requisição: {str(e)}")
         except Exception as e:
@@ -96,7 +127,7 @@ def main():
         finally:
             if conn and conn.is_connected():
                 conn.close()
-                
+
         time.sleep(2)
 
 if __name__ == "__main__":

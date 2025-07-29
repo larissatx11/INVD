@@ -62,6 +62,30 @@ def upload_to_minio():
     except S3Error as e:
         print(f"[MinIO] ❌ Erro ao enviar para MinIO: {e}")
 
+def upload_to_minio():
+    client = Minio(
+        MINIO_ENDPOINT,
+        access_key=ACCESS_KEY,
+        secret_key=SECRET_KEY,
+        secure=False  # use True se for HTTPS
+    )
+
+    try:
+        # Cria o bucket se não existir
+        if not client.bucket_exists(BUCKET_NAME):
+            client.make_bucket(BUCKET_NAME)
+
+        # Faz upload do arquivo local para o bucket
+        client.fput_object(
+            bucket_name=BUCKET_NAME,
+            object_name=S3_OBJECT_NAME,
+            file_path=CSV_PATH,
+            content_type="text/csv"
+        )
+        print(f"CSV enviado para MinIO: {BUCKET_NAME}/{S3_OBJECT_NAME}")
+    except S3Error as e:
+        print(f"Erro ao enviar para o MinIO: {e}")
+
 def main():
     init_csv_file()
     producer = None
