@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN pip install requests kafka-python
+RUN pip install requests kafka-python minio
 
 CMD ["python", "consumer_csv.py"]
