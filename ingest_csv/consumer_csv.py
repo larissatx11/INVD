@@ -35,10 +35,10 @@ def create_kafka_producer():
                 bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
                 value_serializer=lambda v: json.dumps(v).encode("utf-8")
             )
-            print("[Kafka] ✅ Conectado ao Kafka!")
+            print("[Kafka] Conectado ao Kafka!")
             return producer
         except Exception as e:
-            print(f"[Kafka] 🔁 Ainda indisponível: {e}")
+            print(f"[Kafka] Ainda indisponível: {e}")
             time.sleep(2)
     raise Exception("Kafka indisponível após várias tentativas.")
 
@@ -58,9 +58,9 @@ def upload_to_minio():
             file_path=CSV_PATH,
             content_type="text/csv"
         )
-        print(f"[MinIO] ✅ CSV enviado para {BUCKET_NAME}/{S3_OBJECT_NAME}")
+        print(f"[MinIO] CSV enviado para {BUCKET_NAME}/{S3_OBJECT_NAME}")
     except S3Error as e:
-        print(f"[MinIO] ❌ Erro ao enviar para MinIO: {e}")
+        print(f"[MinIO] Erro ao enviar para MinIO: {e}")
 
 def upload_to_minio():
     client = Minio(
