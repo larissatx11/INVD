@@ -58,6 +58,7 @@ def main():
             if response.status_code == 200:
                 dado = response.json()
                 subset = {
+                    "id_colmeia": dado["id_colmeia"],
                     "id": dado["id"],
                     "createdAt": dado["createdAt"],
                     "updatedAt": dado["updatedAt"],

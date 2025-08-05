@@ -6,8 +6,8 @@ import asyncio
 app = FastAPI()
 
 # Carrega dados históricos
-with open("dados_historicos.json", "r") as f:
-    dados = json.load(f)[0]  # acessa a lista interna
+with open("colmeias_atualizadas/colmeia_1_att.json", "r") as f:
+    dados = json.load(f)  # acessa a lista interna
 
 index = 0  # para controlar o dado atual
 

@@ -38,6 +38,7 @@ services:
 
   ingest_db:
     build: ./ingest_db
+    command: consumer_db.py   # roda o script principal de ingestão
     volumes:
       - ./ingest_db/saida:/app/saida
     environment:
@@ -49,6 +50,23 @@ services:
       - api_colmeia
       - mysql
     restart: unless-stopped
+
+  exportador_json:
+    build: ./ingest_db
+    command: exportador_json.py  # roda só exportador
+    volumes:
+      - ./ingest_db/saida:/app/saida
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: colmeia
+    depends_on:
+      - ingest_db
+      - mysql
+    restart: unless-stopped
+
+
 
   mysql:
     image: mysql:5.7

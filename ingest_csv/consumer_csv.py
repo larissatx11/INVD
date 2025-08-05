@@ -25,7 +25,7 @@ def init_csv_file():
         os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
         with open(CSV_PATH, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["id", "createdAt", "updatedAt", "fullWeight", "honeyWeight", "pressure"])
+            writer.writerow(["id_colmeia","id", "createdAt", "updatedAt", "fullWeight", "honeyWeight", "pressure"])
 
 def create_kafka_producer():
     for i in range(10):
@@ -105,6 +105,7 @@ def main():
             if response.status_code == 200:
                 dado = response.json()
                 subset = {
+                    "id_colmeia": dado["id_colmeia"],
                     "id": dado["id"],
                     "createdAt": dado["createdAt"],
                     "updatedAt": dado["updatedAt"],
