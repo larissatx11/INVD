@@ -16,11 +16,16 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+    restart: unless-stopped
 
   zookeeper:
     image: wurstmeister/zookeeper
     ports:
       - "2181:2181"
+    restart: unless-stopped
+
 
   ingest_api:
     build: ./ingest
@@ -28,50 +33,25 @@ services:
     volumes:
       - ./ingest/json:/app/ingest/json
       - ./ingest/csv:/app/ingest/csv
+      - ./ingest/bd_json:/app/ingest/bd_json
     depends_on:
       - api_colmeia
       - kafka
       - minio
     restart: unless-stopped
 
-# Com liçença pin, posso ver o projeto integrador? podia me ajudar a entender o que é o projeto integrador? podia sim intervalo de 10 monutos
-  ingest_db:
-    build: ./ingest_db
-    command: consumer_db.py
-    volumes:
-      - ./ingest_db/saida:/app/saida
-    environment:
-      MYSQL_HOST: mysql
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
-      MYSQL_DATABASE: colmeia
-    depends_on:
-      - api_colmeia
-      - mysql
-    restart: unless-stopped
-
-  exportador_json:
-    build: ./ingest_db
-    command: exportador_json.py
-    volumes:
-      - ./ingest_db/saida:/app/saida
-    environment:
-      MYSQL_HOST: mysql
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
-      MYSQL_DATABASE: colmeia
-    depends_on:
-      - api_colmeia
-      - mysql
-    restart: unless-stopped
-
   mysql:
-    image: mysql:5.7
+    image: bitnami/mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: colmeia
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=colmeia
+      - MYSQL_USER=colmeia_user
+      - MYSQL_PASSWORD=colmeia_pass
+
+    ports:
+      - "3306:3306"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - mysql_data:/bitnami/mysql/data
 
   minio:
     image: minio/minio
@@ -135,6 +115,23 @@ services:
       - ./datalake/processing_json/saida:/app/processing_json/saida
     restart: unless-stopped
 
+  processing_bd_kafka:
+    build: ./datalake/processing_bd
+    command: python3 consumer_transform_bd.py
+    depends_on:
+      - kafka
+      - minio
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: dados_bd
+    volumes:
+      - ./datalake/processing_bd/saida:/app/processing_bd/saida
+    restart: unless-stopped
+
+
 #  airflow:
 #    build: ./airflow
 #    ports:
@@ -150,6 +147,7 @@ services:
 #    depends_on:
 #      - mysql
 
+
 volumes:
-  mysql-data:
+  mysql_data:
   minio_data:

@@ -1,0 +1,2 @@
+id_colmeia,id,createdAt,updatedAt,temp,humidity,fullWeight,honeyWeight,pressure,battery,isOpen,variacao_peso,necessidade_alimentacao,pressao_anomala
+1,1b887997-aeb7-4981-87df-47dd2170010f,2025-05-04T23:55:25.193Z,2025-05-04T23:55:25.193Z,29.5,57.6,31.3,0.0,1034.2,55.3,True,-0.5999999999999979,True,True

@@ -1,8 +1,9 @@
-FROM python:3.10
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY consumer_api.py /app/
-RUN pip install minio kafka-python requests
+COPY consumer_api.py .
+
+RUN pip install kafka-python minio mysql-connector-python requests
 
 CMD ["python", "consumer_api.py"]
