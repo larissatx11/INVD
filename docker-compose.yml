@@ -136,6 +136,22 @@ services:
       - ./datalake/processing_csv/saida:/app/processing_csv
     restart: unless-stopped
 
+  processing_json_kafka:
+    build: ./datalake/processing_json
+    command: python consumer_transform_json.py
+    depends_on:
+      - kafka
+      - minio
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: dados_json
+    volumes:
+      - ./datalake/processing_json/saida:/app/processing_json/saida
+    restart: unless-stopped
+
 #  airflow:
 #    build: ./airflow
 #    ports:
