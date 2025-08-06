@@ -38,7 +38,7 @@ services:
 
   ingest_db:
     build: ./ingest_db
-    command: consumer_db.py   # roda o script principal de ingestão
+    command: consumer_db.py
     volumes:
       - ./ingest_db/saida:/app/saida
     environment:
@@ -53,7 +53,7 @@ services:
 
   exportador_json:
     build: ./ingest_db
-    command: exportador_json.py  # roda só exportador
+    command: exportador_json.py
     volumes:
       - ./ingest_db/saida:/app/saida
     environment:
@@ -65,8 +65,6 @@ services:
       - ingest_db
       - mysql
     restart: unless-stopped
-
-
 
   mysql:
     image: mysql:5.7
@@ -122,17 +120,19 @@ services:
     depends_on:
       - kafka
 
-  processing_csv:
+  processing_csv_kafka:
     build: ./datalake/processing_csv
+    command: python3 consumer_transform_kafka.py
     depends_on:
-      - ingest_csv
+      - kafka
       - minio
     environment:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: dados_csv
     volumes:
-      - ./ingest_csv/saida:/app/ingest_csv/saida
       - ./datalake/processing_csv/saida:/app/processing_csv
     restart: unless-stopped
 

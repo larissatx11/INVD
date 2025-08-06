@@ -2,8 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY . .
+COPY consumer_transform_kafka.py .
 
-RUN pip install pandas minio
+RUN pip install kafka-python pandas minio
 
-CMD ["python", "transform_csv.py"]
+CMD ["python", "consumer_transform_kafka.py"]
