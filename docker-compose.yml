@@ -22,25 +22,19 @@ services:
     ports:
       - "2181:2181"
 
-  ingest_json:
-    build: ./ingest_json
-    command: python consumer_json.py
+  ingest_api:
+    build: ./ingest
+    command: python consumer_api.py
     volumes:
-      - ./ingest_json/saida:/app/ingest_json/saida
+      - ./ingest/json:/app/ingest/json
+      - ./ingest/csv:/app/ingest/csv
     depends_on:
       - api_colmeia
       - kafka
+      - minio
     restart: unless-stopped
 
-  ingest_csv:
-    build: ./ingest_csv
-    volumes:
-      - ./ingest_csv/saida:/app/ingest_csv/saida
-    depends_on:
-      - api_colmeia
-      - kafka
-    restart: unless-stopped
-
+# Com liçença pin, posso ver o projeto integrador? podia me ajudar a entender o que é o projeto integrador? podia sim intervalo de 10 monutos
   ingest_db:
     build: ./ingest_db
     command: consumer_db.py
@@ -79,22 +73,6 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
 
-  uploader_raw:
-    build: ./datalake/uploader_raw
-    depends_on:
-      - ingest_json
-      - ingest_csv
-      - ingest_db
-      - minio
-    environment:
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-    volumes:
-      - ./ingest_json/saida:/app/ingest_json/saida
-      - ./ingest_csv/saida:/app/ingest_csv/saida
-      - ./ingest_db/saida:/app/ingest_db/saida
-
   minio:
     image: minio/minio
     ports:
@@ -127,7 +105,7 @@ services:
 
   processing_csv_kafka:
     build: ./datalake/processing_csv
-    command: python3 consumer_transform_kafka.py
+    command: python3 consumer_transform_csv.py
     depends_on:
       - kafka
       - minio
@@ -138,7 +116,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_TOPIC: dados_csv
     volumes:
-      - ./datalake/processing_csv/saida:/app/processing_csv
+      - ./datalake/processing_csv/saida:/app/processing_csv/saida
     restart: unless-stopped
 
   processing_json_kafka:
