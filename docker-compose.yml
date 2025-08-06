@@ -16,7 +16,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      
+
   zookeeper:
     image: wurstmeister/zookeeper
     ports:
@@ -24,6 +24,7 @@ services:
 
   ingest_json:
     build: ./ingest_json
+    command: python consumer_json.py
     volumes:
       - ./ingest_json/saida:/app/ingest_json/saida
     depends_on:

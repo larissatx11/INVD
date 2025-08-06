@@ -5,16 +5,47 @@ from kafka import KafkaConsumer
 from minio import Minio
 from minio.error import S3Error
 
-KAFKA_TOPIC = "dados_json"
+# Config
+KAFKA_TOPIC = "novo_dado_raw"
 KAFKA_BOOTSTRAP_SERVERS = "kafka:9092"
-OUTPUT_PATH = "/app/processing_json/saida/saida_json_tratado.json"
-BUCKET_NAME = "colmeias-processing"
-S3_OBJECT_NAME = "json/saida_json_tratado.json"
+RAW_BUCKET = "colmeias-raw"
+PROC_BUCKET = "colmeias-processing"
+MINIO_ENDPOINT = "minio:9000"
+ACCESS_KEY = "minioadmin"
+SECRET_KEY = "minioadmin"
 
-# MinIO config
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
-ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+OUTPUT_DIR = "/app/processing_json/saida"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Kafka
+consumer = KafkaConsumer(
+    KAFKA_TOPIC,
+    bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+    auto_offset_reset='latest',
+    enable_auto_commit=True
+)
+
+# MinIO
+client = Minio(
+    MINIO_ENDPOINT,
+    access_key=ACCESS_KEY,
+    secret_key=SECRET_KEY,
+    secure=False
+)
+
+def wait_for_minio(max_attempts=10, delay=3):
+    for attempt in range(1, max_attempts + 1):
+        try:
+            # Tenta listar buckets como teste de conexão
+            client.list_buckets()
+            print("✅ MinIO está pronto!")
+            return
+        except Exception as e:
+            print(f"⏳ Aguardando MinIO... Tentativa {attempt}/{max_attempts}")
+            time.sleep(delay)
+    raise Exception("❌ MinIO não ficou pronto após várias tentativas.")
+
 
 def transformar(dado):
     try:
@@ -26,49 +57,50 @@ def transformar(dado):
         print("❌ Erro ao transformar:", e)
         return None
 
-def upload_para_minio():
+def processar_arquivo(filename):
+    # Baixa o arquivo do MinIO (raw)
+    objeto = f"api/{filename}"
+    local_path = os.path.join(OUTPUT_DIR, f"raw_{filename}")
     try:
-        client = Minio(
-            MINIO_ENDPOINT,
-            access_key=ACCESS_KEY,
-            secret_key=SECRET_KEY,
-            secure=False
-        )
+        client.fget_object(RAW_BUCKET, objeto, local_path)
+    except Exception as e:
+        print(f"❌ Erro ao baixar {objeto} do MinIO:", e)
+        return
 
-        if not client.bucket_exists(BUCKET_NAME):
-            client.make_bucket(BUCKET_NAME)
+    with open(local_path, "r") as f:
+        dado = json.load(f)
 
+    transformado = transformar(dado)
+    if not transformado:
+        return
+
+    # Salva localmente
+    output_file = os.path.join(OUTPUT_DIR, f"transf_{filename}")
+    with open(output_file, "w") as f:
+        json.dump(transformado, f)
+
+    # Envia para MinIO (processing)
+    try:
         client.fput_object(
-            bucket_name=BUCKET_NAME,
-            object_name=S3_OBJECT_NAME,
-            file_path=OUTPUT_PATH,
+            PROC_BUCKET,
+            f"json/{filename}",
+            output_file,
             content_type="application/json"
         )
-        print(f"✅ JSON transformado enviado ao MinIO em {BUCKET_NAME}/{S3_OBJECT_NAME}")
+        print(f"✅ Transformado e enviado para MinIO: json/{filename}")
     except S3Error as e:
-        print("❌ Erro MinIO:", e)
+        print("❌ Erro no upload para processing:", e)
 
 def main():
-    consumer = KafkaConsumer(
-        KAFKA_TOPIC,
-        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-        auto_offset_reset='latest',
-        enable_auto_commit=True
-    )
-
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    open(OUTPUT_PATH, "a").close()  # cria o arquivo vazio se não existir
+    wait_for_minio()
+    if not client.bucket_exists(PROC_BUCKET):
+        client.make_bucket(PROC_BUCKET)
 
     for msg in consumer:
-        dado = msg.value
-        transformado = transformar(dado)
-
-        if transformado:
-            with open(OUTPUT_PATH, "a") as f:
-                f.write(json.dumps(transformado) + "\n")
-            print("📝 Dado transformado salvo:", transformado)
-            upload_para_minio()
+        filename = msg.value.get("filename")
+        if filename:
+            print("📦 Novo arquivo detectado:", filename)
+            processar_arquivo(filename)
 
 if __name__ == "__main__":
     main()
