@@ -1,0 +1,14 @@
+{
+    "id": "15fc5794-1972-4b0c-a7e3-629de1b560a4",
+    "id_colmeia": 1,
+    "createdAt": "2025-05-03T12:55:20.000000Z",
+    "updatedAt": "2025-05-03T12:55:20.000000Z",
+    "temp": "33.5",
+    "humidity": "56.1",
+    "fullWeight": "31.7",
+    "honeyWeight": "0.0",
+    "pressure": "961.2",
+    "battery": "88.6",
+    "isOpen": 0,
+    "battery_status": 88.6
+}

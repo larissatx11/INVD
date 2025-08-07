@@ -131,6 +131,21 @@ services:
       - ./datalake/processing_bd/saida:/app/processing_bd/saida
     restart: unless-stopped
 
+  processing_bd_kafka:
+    build: ./datalake/processing_bd
+    command: python3 consumer_transform_bd.py
+    depends_on:
+      - kafka
+      - minio
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: dados_bd
+    volumes:
+      - ./datalake/processing_bd/saida:/app/processing_bd/saida
+    restart: unless-stopped
 
 #  airflow:
 #    build: ./airflow
@@ -140,12 +155,15 @@ services:
 #      - kafka
 #      - mysql
 
-#  dashboard:
-#    build: ./dashboard
-#    ports:
-#      - "8501:8501"
-#    depends_on:
-#      - mysql
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./datalake/processing_csv/saida:/app/processing_csv/saida
+      - ./datalake/processing_json/saida:/app/processing_json/saida
+      - ./datalake/processing_bd/saida:/app/processing_bd/saida
+    restart: unless-stopped
 
 
 volumes:

@@ -1,2 +1,6 @@
 id_colmeia,id,createdAt,updatedAt,temp,humidity,fullWeight,honeyWeight,pressure,battery,isOpen,variacao_peso,necessidade_alimentacao,pressao_anomala
+<<<<<<<< HEAD:datalake/processing_csv/saida/transf_dado_20250806_233726.csv
 1,5ed5861e-f00f-4887-bd1a-b0aa19d79a4d,2025-05-03T21:55:20.333Z,2025-05-03T21:55:20.333Z,29,64.3,31.2,0.0,1043.4,74.85,False,0.0,True,True
+========
+1,11cb37d2-9ed0-4492-8f29-dc4ebdb4b4fd,2025-05-03T04:55:19.250Z,2025-05-03T04:55:19.250Z,30,46.1,31.8,0.0,1031.5,73.1,True,1.5,True,True
+>>>>>>>> dashboard:datalake/processing_csv/saida/transf_dado_20250807_024922.csv
