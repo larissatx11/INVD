@@ -34,10 +34,9 @@ services:
       - minio
     restart: unless-stopped
 
-# Com liçença pin, posso ver o projeto integrador? podia me ajudar a entender o que é o projeto integrador? podia sim intervalo de 10 monutos
   ingest_db:
     build: ./ingest_db
-    command: consumer_db.py
+    command: python consumer_db.py
     volumes:
       - ./ingest_db/saida:/app/saida
     environment:
@@ -52,7 +51,7 @@ services:
 
   exportador_json:
     build: ./ingest_db
-    command: exportador_json.py
+    command: python exportador_json.py
     volumes:
       - ./ingest_db/saida:/app/saida
     environment:
@@ -70,6 +69,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: colmeia
+    ports:
+      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
 
@@ -135,20 +136,55 @@ services:
       - ./datalake/processing_json/saida:/app/processing_json/saida
     restart: unless-stopped
 
-#  airflow:
-#    build: ./airflow
-#    ports:
-#      - "8080:8080"
-#    depends_on:
-#      - kafka
-#      - mysql
+  airflow:
+    image: apache/airflow:2.9.1
+    container_name: airflow
+    ports:
+      - "8080:8080"
+    command: airflow webserver
+    depends_on:
+      - kafka
+      - mysql
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./ingest:/opt/airflow/ingest
+      - ./ingest_db:/opt/airflow/ingest_db
+      - ./datalake/processing_csv:/opt/airflow/processing_csv
+      - ./datalake/processing_json:/opt/airflow/processing_json
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    working_dir: /opt/airflow
 
-#  dashboard:
-#    build: ./dashboard
-#    ports:
-#      - "8501:8501"
-#    depends_on:
-#      - mysql
+  airflow_scheduler:
+    image: apache/airflow:2.9.1
+    container_name: airflow_scheduler
+    command: airflow scheduler
+    depends_on:
+      - airflow
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./ingest:/opt/airflow/ingest
+      - ./ingest_db:/opt/airflow/ingest_db
+      - ./datalake/processing_csv:/opt/airflow/processing_csv
+      - ./datalake/processing_json:/opt/airflow/processing_json
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+
+  airflow-cli:
+    image: apache/airflow:2.9.1
+    container_name: airflow_cli
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    working_dir: /opt/airflow
+    entrypoint: ""
+    command: bash
 
 volumes:
   mysql-data:
