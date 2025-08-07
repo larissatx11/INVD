@@ -49,12 +49,12 @@ def wait_for_minio(max_attempts=10, delay=3):
     for attempt in range(1, max_attempts + 1):
         try:
             client.list_buckets()
-            print("✅ MinIO está pronto!")
+            print(" MinIO está pronto!")
             return
         except Exception as e:
-            print(f"⏳ Aguardando MinIO... Tentativa {attempt}/{max_attempts}")
+            print(f" Aguardando MinIO... Tentativa {attempt}/{max_attempts}")
             time.sleep(delay)
-    raise Exception("❌ MinIO não ficou pronto após várias tentativas.")
+    raise Exception(" MinIO não ficou pronto após várias tentativas.")
 
 def transformar_csv(dado, historico):
     try:
@@ -91,7 +91,7 @@ def processar_arquivo(filename, historico):
         try:
             client.fget_object(RAW_BUCKET, objeto, local_path)
         except Exception as e:
-            print(f"❌ Erro ao baixar {objeto} do MinIO:", e)
+            print(f" Erro ao baixar {objeto} do MinIO:", e)
             return
 
     # Lê o CSV e transforma
@@ -104,7 +104,7 @@ def processar_arquivo(filename, historico):
             if linha_tratada:
                 linhas_transformadas.append(linha_tratada)
     except Exception as e:
-        print("❌ Erro ao processar CSV:", e)
+        print(" Erro ao processar CSV:", e)
         return
 
     if not linhas_transformadas:
@@ -123,9 +123,9 @@ def processar_arquivo(filename, historico):
             output_file,
             content_type="text/csv"
         )
-        print(f"✅ Transformado e enviado para MinIO: csv/{filename}")
+        print(f" Transformado e enviado para MinIO: csv/{filename}")
     except S3Error as e:
-        print("❌ Erro no upload para processing:", e)
+        print(" Erro no upload para processing:", e)
 
 def main():
     wait_for_minio()
@@ -136,10 +136,10 @@ def main():
     for msg in consumer:
         filename = msg.value.get("filename")
         if filename.endswith('.csv'):
-            print("📦 Novo arquivo detectado:", filename)
+            print(" Novo arquivo detectado:", filename)
             processar_arquivo(filename, historico)
         else:
-            print(f"⚠ Ignorando arquivo não CSV: {filename}")
+            print(f" Ignorando arquivo não CSV: {filename}")
 
 if __name__ == "__main__":
     main()

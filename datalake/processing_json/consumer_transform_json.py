@@ -48,12 +48,12 @@ def wait_for_minio(max_attempts=10, delay=3):
         try:
             # Tenta listar buckets como teste de conexão
             client.list_buckets()
-            print("✅ MinIO está pronto!")
+            print(" MinIO está pronto!")
             return
         except Exception as e:
-            print(f"⏳ Aguardando MinIO... Tentativa {attempt}/{max_attempts}")
+            print(f" Aguardando MinIO... Tentativa {attempt}/{max_attempts}")
             time.sleep(delay)
-    raise Exception("❌ MinIO não ficou pronto após várias tentativas.")
+    raise Exception(" MinIO não ficou pronto após várias tentativas.")
 
 
 def transformar(dado):
@@ -63,7 +63,7 @@ def transformar(dado):
         dado["alerta_calor"] = temp > 36 or temp < 34
         return dado
     except Exception as e:
-        print("❌ Erro ao transformar:", e)
+        print(" Erro ao transformar:", e)
         return None
 
 def processar_arquivo(filename):
@@ -74,7 +74,7 @@ def processar_arquivo(filename):
         try:
             client.fget_object(RAW_BUCKET, objeto, local_path)
         except Exception as e:
-            print(f"❌ Erro ao baixar {objeto} do MinIO:", e)
+            print(f" Erro ao baixar {objeto} do MinIO:", e)
             return
 
     with open(local_path, "r") as f:
@@ -97,9 +97,9 @@ def processar_arquivo(filename):
             output_file,
             content_type="application/json"
         )
-        print(f"✅ Transformado e enviado para MinIO: json/{filename}")
+        print(f" Transformado e enviado para MinIO: json/{filename}")
     except S3Error as e:
-        print("❌ Erro no upload para processing:", e)
+        print(" Erro no upload para processing:", e)
 
 def main():
     wait_for_minio()
@@ -109,10 +109,10 @@ def main():
     for msg in consumer:
         filename = msg.value.get("filename")
         if filename.endswith(".json"):
-            print("📦 Novo arquivo detectado:", filename)
+            print(" Novo arquivo detectado:", filename)
             processar_arquivo(filename)
         else:
-            print(f"⚠ Ignorando arquivo não JSON: {filename}")
+            print(f" Ignorando arquivo não JSON: {filename}")
 
 if __name__ == "__main__":
     main()
