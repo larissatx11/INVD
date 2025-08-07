@@ -25,7 +25,12 @@ BUCKET_NAME = "colmeias-raw"
 
 # Kafka
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
-KAFKA_TOPIC = "novo_dado_raw"
+# Tópicos Kafka por tipo de dado
+KAFKA_TOPICS = {
+    "json": "dados_json",
+    "csv": "dados_csv",
+    "bd-json": "dados_bd_json"
+}
 
 # MySQL
 MYSQL_CONFIG = {
@@ -52,12 +57,12 @@ def wait_for_minio(max_attempts=10, delay=3):
     for attempt in range(1, max_attempts + 1):
         try:
             minio_client.list_buckets()
-            print("✅ MinIO está pronto!")
+            print("MinIO está pronto!")
             if not minio_client.bucket_exists(BUCKET_NAME):
                 minio_client.make_bucket(BUCKET_NAME)
             return
         except Exception:
-            print(f"⏳ Aguardando MinIO... Tentativa {attempt}/{max_attempts}")
+            print(f"Aguardando MinIO... Tentativa {attempt}/{max_attempts}")
             time.sleep(delay)
     raise Exception("❌ MinIO não ficou pronto após várias tentativas.")
 
@@ -82,11 +87,6 @@ def create_table_if_not_exists(conn):
             id_colmeia INT,
             created_at DATETIME,
             updated_at DATETIME,
-            temp FLOAT,
-            humidity FLOAT,
-            full_weight FLOAT,
-            honey_weight FLOAT,
-            pressure FLOAT,
             battery FLOAT,
             is_open BOOLEAN,
             registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -103,17 +103,11 @@ def salvar_no_banco(dado):
     cursor.execute("""
         INSERT INTO dados_colmeia (
             id, id_colmeia, created_at, updated_at,
-            temp, humidity, full_weight, honey_weight,
-            pressure, battery, is_open
+            battery, is_open
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
             updated_at=VALUES(updated_at),
-            temp=VALUES(temp),
-            humidity=VALUES(humidity),
-            full_weight=VALUES(full_weight),
-            honey_weight=VALUES(honey_weight),
-            pressure=VALUES(pressure),
             battery=VALUES(battery),
             is_open=VALUES(is_open)
     """, (
@@ -121,11 +115,6 @@ def salvar_no_banco(dado):
         dado["id_colmeia"],
         datetime.strptime(dado["createdAt"].replace("Z", ""), "%Y-%m-%dT%H:%M:%S.%f"),
         datetime.strptime(dado["updatedAt"].replace("Z", ""), "%Y-%m-%dT%H:%M:%S.%f"),
-        float(dado["temp"]),
-        float(dado["humidity"]),
-        float(dado["fullWeight"]),
-        float(dado["honeyWeight"]),
-        float(dado["pressure"]),
         float(dado["battery"]),
         dado["isOpen"]
     ))
@@ -138,26 +127,47 @@ def salvar_no_banco(dado):
 def recuperar_dado_do_banco(id_dado):
     conn = mysql.connector.connect(**MYSQL_CONFIG)
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM dados_colmeia WHERE id = %s", (id_dado,))
+    cursor.execute("""
+        SELECT id, id_colmeia, created_at, updated_at, battery, is_open
+        FROM dados_colmeia
+        WHERE id = %s
+    """, (id_dado,))
     resultado = cursor.fetchone()
     conn.close()
     return resultado
-
 # === FUNÇÕES DE SALVAMENTO LOCAL E ENVIO ===
 
-def salvar_json_local(dado, nome_arquivo, dir_path=JSON_DIR):
-    caminho = os.path.join(dir_path, nome_arquivo)
+def salvar_json_local(dado, nome_arquivo):
+    campos_json = ["id", "createdAt", "updatedAt", "temp", "humidity"]
+    dado_filtrado = {chave: dado.get(chave) for chave in campos_json}
+    
+    caminho = os.path.join(JSON_DIR, nome_arquivo)
     with open(caminho, "w") as f:
-        json.dump(dado, f, indent=4)
+        json.dump(dado_filtrado, f, indent=4)
     return caminho
 
+
 def salvar_csv_local(dado, nome_arquivo):
+    campos_csv = ["id", "createdAt", "updatedAt", "fullWeight", "honeyWeight", "pressure"]
+    dado_filtrado = {chave: dado.get(chave) for chave in campos_csv}
+    
     caminho = os.path.join(CSV_DIR, nome_arquivo)
     with open(caminho, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=dado.keys())
+        writer = csv.DictWriter(f, fieldnames=campos_csv)
         writer.writeheader()
-        writer.writerow(dado)
+        writer.writerow(dado_filtrado)
     return caminho
+
+def salvar_json_bd_local(dado, nome_arquivo):
+    campos_bd = ["id", "id_colmeia", "createdAt", "updatedAt", "battery", "isOpen"]
+    dado_filtrado = {chave: dado.get(chave) for chave in campos_bd}
+
+    caminho = os.path.join(BD_JSON_DIR, nome_arquivo)
+    with open(caminho, "w") as f:
+        json.dump(dado_filtrado, f, indent=4)
+    return caminho
+
+
 
 def enviar_para_minio(caminho_arquivo_local, pasta_destino_minio):
     nome_arquivo = os.path.basename(caminho_arquivo_local)
@@ -170,10 +180,14 @@ def publicar_kafka(nome_arquivo, tipo):
         "filename": nome_arquivo,
         "tipo": tipo
     }
-    producer.send(KAFKA_TOPIC, json.dumps(payload).encode("utf-8"))
-    print(f"✔ Publicado no Kafka: {KAFKA_TOPIC} - {payload}")
 
-# ... (seu código acima permanece igual até aqui) ...
+    topico = KAFKA_TOPICS.get(tipo)
+    if not topico:
+        print(f"⚠️ Tipo desconhecido para Kafka: {tipo}")
+        return
+
+    producer.send(topico, json.dumps(payload).encode("utf-8"))
+    print(f"✔ Publicado no Kafka: {topico} - {payload}")
 
 def map_dado_bd_para_formato_api(dado_bd):
     if not dado_bd:
@@ -183,11 +197,6 @@ def map_dado_bd_para_formato_api(dado_bd):
         "id_colmeia": dado_bd.get("id_colmeia"),
         "createdAt": dado_bd.get("created_at").strftime("%Y-%m-%dT%H:%M:%S.%fZ") if dado_bd.get("created_at") else None,
         "updatedAt": dado_bd.get("updated_at").strftime("%Y-%m-%dT%H:%M:%S.%fZ") if dado_bd.get("updated_at") else None,
-        "temp": str(dado_bd.get("temp")),
-        "humidity": str(dado_bd.get("humidity")),
-        "fullWeight": str(dado_bd.get("full_weight")),
-        "honeyWeight": str(dado_bd.get("honey_weight")),
-        "pressure": str(dado_bd.get("pressure")),
         "battery": str(dado_bd.get("battery")),
         "isOpen": dado_bd.get("is_open"),
     }
@@ -219,7 +228,8 @@ def main():
 
                 if dado_bd_formatado:
                     # Salvar JSON transformado localmente
-                    bdjson_path = salvar_json_local(dado_bd_formatado, nome_bdjson, BD_JSON_DIR)
+                    bdjson_path = salvar_json_bd_local(dado_bd_formatado, nome_bdjson)
+
 
                     # Enviar arquivos para MinIO
                     enviar_para_minio(json_path, "api")
@@ -231,7 +241,7 @@ def main():
                     publicar_kafka(os.path.basename(csv_path), "csv")
                     publicar_kafka(os.path.basename(bdjson_path), "bd-json")
                 else:
-                    print("⚠️ Dado recuperado do banco está vazio ou inválido.")
+                    print("Dado recuperado do banco está vazio ou inválido.")
 
             else:
                 print(f"Erro ao consultar API: {response.status_code}")

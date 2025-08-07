@@ -7,7 +7,7 @@ from minio import Minio
 from minio.error import S3Error
 
 # Configurações
-KAFKA_TOPIC = "novo_dado_raw"
+KAFKA_TOPIC = "dados_bd_json"
 KAFKA_BOOTSTRAP_SERVERS = "kafka:9092"
 RAW_BUCKET = "colmeias-raw"
 PROC_BUCKET = "colmeias-processing"
