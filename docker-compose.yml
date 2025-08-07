@@ -131,22 +131,15 @@ services:
       - ./datalake/processing_bd/saida:/app/processing_bd/saida
     restart: unless-stopped
 
-
-#  airflow:
-#    build: ./airflow
-#    ports:
-#      - "8080:8080"
-#    depends_on:
-#      - kafka
-#      - mysql
-
-#  dashboard:
-#    build: ./dashboard
-#    ports:
-#      - "8501:8501"
-#    depends_on:
-#      - mysql
-
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./datalake/processing_csv/saida:/app/processing_csv/saida
+      - ./datalake/processing_json/saida:/app/processing_json/saida
+      - ./datalake/processing_bd/saida:/app/processing_bd/saida
+    restart: unless-stopped
 
 volumes:
   mysql_data:
